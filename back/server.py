@@ -34,10 +34,17 @@ thread.start()
 
 @app.route('/api/data', methods=['GET'])
 def get_data():
+    print(f"Latest data: {latest_data}")  # Log the latest data
     if latest_data.count(',') < 2:
         return jsonify({'error': 'Not enough data'}), 500
 
-    lightValue, temperatureValue, slideValue = latest_data.split(',')
+    data_values = latest_data.split(',')
+    print(f"Data values: {data_values}")  # Log the split data values
+
+    if len(data_values) != 3:
+        return jsonify({'error': 'Incorrect number of data values'}), 500
+
+    lightValue, temperatureValue, slideValue = data_values
     print(f"Sending data: Light: {lightValue}, Temperature: {temperatureValue}, Slide: {slideValue}")  # Log the data being sent
     return jsonify({
         'lightValue': lightValue,
