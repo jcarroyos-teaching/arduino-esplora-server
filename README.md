@@ -1,6 +1,6 @@
 # Backend Python Flask App
 
-Este código es un servidor Flask que lee datos de un puerto serie, probablemente de un dispositivo Arduino, y proporciona estos datos a través de una API REST.
+Este código es un servidor Flask que lee datos de un puerto serie, desde un dispositivo Arduino Esplora, y proporciona estos datos a través de una API REST.
 
 Primero, se importan las bibliotecas necesarias. Flask es un marco de trabajo para crear aplicaciones web, jsonify es una función para convertir objetos Python en una respuesta HTTP JSON. serial es una biblioteca para la comunicación serie, Thread es una clase para la creación de hilos y time es una biblioteca para operaciones relacionadas con el tiempo. CORS es una extensión de Flask para manejar el recurso compartido de origen cruzado.
 
