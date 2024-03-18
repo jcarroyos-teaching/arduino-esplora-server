@@ -1,0 +1,38 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+	{
+            "label": "Use NVM to set Node version",
+            "type": "shell",
+            "command": "bash -ic 'nvm use stable && npm run start'",
+            "options": {
+                "cwd": "${workspaceFolder}/front"
+            },
+            "problemMatcher": [],
+            "runOptions": {
+                "runOn": "folderOpen"
+            }
+        },
+        {
+            "label": "run-python-script",
+            "type": "shell",
+            "command": "/usr/local/bin/python3 ./back/server.py",
+            "problemMatcher": [],
+            "runOptions": {
+                "runOn": "folderOpen"
+            }
+        },
+        {
+            "label": "run",
+            "type": "npm",
+            "script": "start",
+            "options": {
+                "cwd": "${workspaceFolder}/front"
+            },
+            "problemMatcher": [],
+            "runOptions": {
+                "runOn": "folderOpen"
+            }
+        }
+    ]
+}
