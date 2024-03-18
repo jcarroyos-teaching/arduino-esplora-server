@@ -7,50 +7,42 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 
-# Replace '/dev/tty.usbmodem14101' with the correct port for your system.
-# Use "python -m serial.tools.list_ports" in your terminal to find available serial ports.
 serial_port = serial.Serial('/dev/tty.usbmodem14101', baudrate=9600, timeout=1)
 
-latest_data = "No data"
+latest_data = {}
+
+def parse_data(data):
+    sections = data.split(' | ')
+    parsed_data = {}
+    for section in sections:
+        key_values = section.split(': ')
+        key = key_values[0]
+        values = key_values[1].split(',')
+        parsed_data[key] = values
+    return parsed_data
 
 def read_from_port(ser):
     global latest_data
     while True:
         try:
-            # Read the newest output from the Arduino
             serial_data = ser.readline().decode('utf-8').strip()
-            if serial_data:  # If not an empty string
-                print(f"Raw data from serial port: {serial_data}")  # Debug log
-                latest_data = serial_data
+            if serial_data:
+                print(f"Raw data from serial port: {serial_data}")
+                latest_data = parse_data(serial_data)
                 print(f"Received data from serial port: {latest_data}")
         except serial.SerialException:
             print("Error reading from serial port")
-            break  # Optionally, attempt reconnection here
-        time.sleep(0.1)  # Prevent overly aggressive CPU usage
+            break
+        time.sleep(0.5)
 
-# Start the serial reading in a separate thread
 thread = Thread(target=read_from_port, args=(serial_port,))
 thread.start()
 
 @app.route('/api/data', methods=['GET'])
 def get_data():
-    print(f"Latest data: {latest_data}")  # Log the latest data
-    if latest_data.count(',') < 2:
-        return jsonify({'error': 'Not enough data'}), 500
-
-    data_values = latest_data.split(',')
-    print(f"Data values: {data_values}")  # Log the split data values
-
-    if len(data_values) != 3:
-        return jsonify({'error': 'Incorrect number of data values'}), 500
-
-    lightValue, temperatureValue, slideValue = data_values
-    print(f"Sending data: Light: {lightValue}, Temperature: {temperatureValue}, Slide: {slideValue}")  # Log the data being sent
-    return jsonify({
-        'lightValue': lightValue,
-        'temperatureValue': temperatureValue,
-        'slideValue': slideValue
-    })
+    if not latest_data:
+        return jsonify({"error": "Data not available yet"}), 503
+    return jsonify(latest_data)
 
 if __name__ == '__main__':
     app.run(port=3000, debug=True)
