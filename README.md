@@ -1,3 +1,6 @@
+
+<img width="1754" alt="Captura de Pantalla 2024-03-18 a la(s) 7 27 00 p m" src="https://github.com/jcarroyos-teaching/arduino-esplora-server/assets/4398275/aa31b189-a431-43aa-809e-6d26b61a3463">
+
 # Backend Python Flask App
 
 Este código es un servidor Flask que lee datos de un puerto serie, desde un dispositivo Arduino Esplora, y proporciona estos datos a través de una API REST.
