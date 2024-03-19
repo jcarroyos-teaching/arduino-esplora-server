@@ -1,88 +1,96 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from "react";
+
+// Mover hexToRgba fuera del componente ya que no depende del estado ni props
+const hexToRgba = (hex, alpha = 1) => {
+  const [r, g, b] = hex.match(/\w\w/g).map(x => parseInt(x, 16));
+  return `rgba(${r},${g},${b},${alpha})`;
+};
 
 const SensorCanvas = () => {
-  const [sensorData, setSensorData] = useState({ lightValue: 0, slideValue: 0, temperatureValue: 0 });
+  const [sensorData, setSensorData] = useState({
+    "Accel X,Y,Z": [0, 0, 0],
+    "Buttons Up,Down,Left,Right": [0, 0, 0, 0],
+    "Joystick X,Y,Button": [0, 0, 0],
+    "Light,Temperature,Slider,Microphone": [0, 0, 0, 0],
+  });
   const canvasRef = useRef(null);
-  const animationRef = useRef(null);
-  const currentRadiiRef = useRef({ light: 0, slide: 0, temperature: 0 });
+  const currentRadiiRef = useRef({});
 
-  // Fetch data from the server
+  const colors = useMemo(() => [
+    "#000000", "#0047AB", "#CA1F7B", "#32CD32",
+    "#CA1F7B", "#B22222", "#007A7A", "#4169E1",
+  ].map(color => hexToRgba(color, 0.7)), []);
+
   useEffect(() => {
     const fetchData = async () => {
+      // La lógica de carga de datos sigue igual
       try {
-        const response = await fetch('http://localhost:3000/api/data');
+        const response = await fetch("http://localhost:3000/api/data");
         const data = await response.json();
-        setSensorData({
-          lightValue: parseInt(data.lightValue, 10),
-          slideValue: parseInt(data.slideValue, 10),
-          temperatureValue: parseInt(data.temperatureValue, 10),
-        });
+        setSensorData(data);
       } catch (error) {
         console.error("Error fetching data: ", error);
       }
     };
 
     fetchData();
-    const intervalId = setInterval(fetchData, 500); // Fetch new data every 0.5 seconds
-
-    return () => clearInterval(intervalId); // Clean up interval on component unmount
+    const intervalId = setInterval(fetchData, 500);
+    return () => clearInterval(intervalId);
   }, []);
 
   useEffect(() => {
+    const canvas = canvasRef.current;
+    const context = canvas.getContext("2d");
+
     const animateCircles = () => {
-      const canvas = canvasRef.current;
-      const context = canvas.getContext('2d');
-      const { lightValue, slideValue, temperatureValue } = sensorData;
-      const { light, slide, temperature } = currentRadiiRef.current;
-
-      // Calculate target radii based on sensor values
-      const targetRadii = {
-        light: lightValue / 12,
-        slide: slideValue / 12,
-        temperature: temperatureValue * 2.8,
-      };
-
-      // Smoothly update current radii towards target radii
-      currentRadiiRef.current = {
-        light: light + (targetRadii.light - light) * 0.1,
-        slide: slide + (targetRadii.slide - slide) * 0.1,
-        temperature: temperature + (targetRadii.temperature - temperature) * 0.1,
-      };
-
-      // Clear previous drawing
       context.clearRect(0, 0, canvas.width, canvas.height);
+      let circleIndex = 0;
 
-      // Define circles properties
-      const circles = [
-        { x: 100, y: 150, radius: light, color: '#F07167' },
-        { x: 300, y: 150, radius: slide, color: '#00AFB9' },
-        { x: 500, y: 150, radius: temperature, color: '#FED9B7' },
-      ];
-
-      // Draw each circle
-      circles.forEach(({ x, y, radius, color }) => {
-        context.beginPath();
-        context.arc(x, y, radius, 0, 2 * Math.PI);
-        context.fillStyle = color;
-        context.fill();
+      Object.keys(sensorData).forEach((key) => {
+        sensorData[key].forEach((value, valueIndex) => {
+          const flatIndex = circleIndex + valueIndex;
+          drawCircleAndText(context, key, value, flatIndex, currentRadiiRef.current, colors);
+        });
+        circleIndex += sensorData[key].length;
       });
 
-      // Request next frame in the animation
-      animationRef.current = requestAnimationFrame(animateCircles);
+      requestAnimationFrame(animateCircles);
     };
 
-    // Start the animation
-    animationRef.current = requestAnimationFrame(animateCircles);
+    animateCircles();
+    return () => cancelAnimationFrame(animateCircles);
+  }, [sensorData, colors]); // Agregar colors a las dependencias
 
-    return () => {
-      // Cancel the animation on component unmount
-      cancelAnimationFrame(animationRef.current);
-    };
-  }, [sensorData]); // We depend on `sensorData` to decide when to rerun the effect
+  // Aumentar el tamaño del canvas para manejar más datos visualmente
+  return <canvas ref={canvasRef} width={1600} height={600} />;
+};
 
-  return (
-    <canvas ref={canvasRef} width={600} height={300} />
-  );
+// Función separada para dibujar círculos y texto
+const drawCircleAndText = (context, key, value, index, radiiRef, colors) => {
+  const currentRadius = radiiRef[index] || 0;
+  let targetRadius = calculateTargetRadius(key, value);
+  radiiRef[index] = currentRadius + (targetRadius - currentRadius) * 0.1;
+
+  const colorIndex = index % colors.length;
+  context.beginPath();
+  context.arc(100 + index * 100, 300, radiiRef[index], 0, 2 * Math.PI);
+  context.fillStyle = colors[colorIndex];
+  context.fill();
+
+  // Agregar texto
+  context.fillStyle = '#000';
+  const textYPos = index % 2 === 0 ? 300 - radiiRef[index] - 20 : 300 + radiiRef[index] + 20;
+  context.fillText(`${key} ${value}`, 100 + index * 100, textYPos);
+};
+
+// Función separada para calcular el radio objetivo
+const calculateTargetRadius = (key, value) => {
+  if (key === 'Button' || key === 'Joystick') {
+    return value === '1' ? 30 : 10;
+  } else {
+    let radius = Math.abs(parseInt(value, 10) / 6);
+    return Math.max(radius, 5); // Asegurar un radio mínimo de 5px
+  }
 };
 
 export default SensorCanvas;
